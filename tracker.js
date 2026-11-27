@@ -30,7 +30,7 @@ function flushInf(){
 }
 function nota(x,max){return Math.round(x/max*100)/10}  // nota sobre 10 con un decimal
 function txt(el){return el?String(el.innerText||el.textContent||'').split('\n')[0].replace(/\s+/g,' ').trim():''}
-function scoreText(){var s=document.querySelector('#app .score');return s?String(s.innerText).replace(/\s*\n\s*/g,' · ').trim():''}
+function scoreText(){var s=document.querySelector('#app .score');if(!s)return '';return String(s.innerText).split(/\s*(?:\n|·)\s*/).filter(function(x){return /\d/.test(x)}).join(' · ')}
 
 /* ---------- dónde está el alumno (sección › tema › apartado) ---------- */
 var SEC={inicio:'Inicio',gramatica:'Gramática',test:'Gramática',vocabulario:'Vocabulario',writing:'Writing',juegos:'Juegos',juego:'Juegos',pau:'Exámenes PAU'};
@@ -63,7 +63,7 @@ window.iowLog=function(kind,id,v){
  var w=where(),sc=scoreText();
  switch(kind){
   case 'grammar':case 'vocab':case 'mixed':case 'practice':case 'lab':
-   row(kind==='grammar'||kind==='mixed'?'Gramática · nota':'Vocabulario · nota',w,nota(v,100),(sc?sc+' · ':'')+v+'%');break;
+   row(kind==='grammar'||kind==='mixed'?'Gramática · nota':'Vocabulario · nota',w,nota(v,100),sc||v+'%');break;
   case 'game':
    if(id==='escape'){var mm=Math.floor(v/60),ss=v%60;row('Juego',w,null,'Tiempo: '+mm+':'+(ss<10?'0':'')+ss);break}
    if(GAME10[id])row('Juego',w,nota(v,GAME10[id]),v+' / '+GAME10[id]);
