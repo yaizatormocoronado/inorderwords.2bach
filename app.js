@@ -40,7 +40,7 @@ const hl=q=>esc(q).replace(/___/g,'<span class="blank"></span>');
 
 /* ---------- progress ---------- */
 const prog=()=>store.get('prog',{});
-function setBest(id,mode,pct){const p=prog();p[id]=p[id]||{};p[id][mode]=Math.max(p[id][mode]||0,pct);store.set('prog',p)}
+function setBest(id,mode,pct){window.iowLog&&iowLog('grammar',id+'|'+mode,pct);const p=prog();p[id]=p[id]||{};p[id][mode]=Math.max(p[id][mode]||0,pct);store.set('prog',p)}
 function unitPct(id){const p=prog()[id]||{};return Math.round(((p.mc||0)+(p.gap||0)+(p.tr||0))/3)}
 const examBest=()=>store.get('exams',{});
 
@@ -240,7 +240,7 @@ function paneInf(pane,units){
  const tagU=id=>{const u=G.find(x=>x.id===id);return units.length>1&&u?`<span class="tag" style="--c:${u.color};--on:${onColor(u.color)}">${esc(u.name)}</span> `:''};
  const ex=e=>e?`<p class="exp">${tx(esc(e[0]),esc(e[1]))}</p>`:'';
  const hlq=q=>esc(q).replace('___','<span class="blank"></span>');
- const solved=good=>{n++;if(good){ok++;streak++;const c=infCount();c[uid]=(c[uid]||0)+1;store.set('inf',c)}else streak=0;
+ const solved=good=>{window.iowLog&&iowLog('inf',uid,good);n++;if(good){ok++;streak++;const c=infCount();c[uid]=(c[uid]||0)+1;store.set('inf',c)}else streak=0;
   const st=document.getElementById('infst');if(st)st.innerHTML=`<span>✔ ${ok} / ${n}</span><span>🔥 ${streak}</span>`};
  const next=()=>{uid=R0(units);it=GN.make(uid,infType);done=false;draw()};
  function draw(){
@@ -281,7 +281,7 @@ function mixed(){
  const pane=document.getElementById('pane');
  const go=m=>{document.querySelectorAll('#mtabs button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   if(m==='inf')paneInf(pane,G.map(u=>u.id));
-  else{paneMC(pane,pick(pool,10),r=>{const b=store.get('mixed',0);store.set('mixed',Math.max(b,r))});document.getElementById('again').onclick=()=>go('t10')}};
+  else{paneMC(pane,pick(pool,10),r=>{window.iowLog&&iowLog('mixed','',r);const b=store.get('mixed',0);store.set('mixed',Math.max(b,r))});document.getElementById('again').onclick=()=>go('t10')}};
  document.getElementById('mtabs').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.m)};
  go('inf');
 }
@@ -340,7 +340,7 @@ function vocab(){
   draw();
  }else if(vM==='test'){
   const qs=pick(t.g,Math.min(10,t.g.length)).map(([en,es])=>{const o=shuffle([es,...pick(t.g.filter(x=>x[0]!==en&&x[1]!==es),3).map(x=>x[1])]);return{q:`What does “${en}” mean?`,o,a:o.indexOf(es),e:`${en} = ${es}`}});
-  paneMC(vp,qs,r=>{const b=store.get('vocab',{});b[t.id]=Math.max(b[t.id]||0,r);store.set('vocab',b)});
+  paneMC(vp,qs,r=>{window.iowLog&&iowLog('vocab',t.id,r);const b=store.get('vocab',{});b[t.id]=Math.max(b[t.id]||0,r);store.set('vocab',b)});
   document.getElementById('again').onclick=()=>vocab();
  }else{
   const Q=t.quest;
@@ -370,7 +370,7 @@ function practice(vp,t){
   Q.match.forEach(([w,d],i)=>{const s=document.getElementById('pm'+i),g=s.value===d;if(g)ok++;s.className=g?'ok':'bad'});
   Q.gaps.forEach(([s,a],i)=>{const el=document.getElementById('pg'+i),sol=document.getElementById('pgs'+i),g=match(el.value,[a]);if(g)ok++;el.className='t gap '+(g?'ok':'bad');sol.hidden=g;sol.textContent='Answer: '+a});
   const tot=Q.match.length+Q.gaps.length,pct=Math.round(ok/tot*100);document.getElementById('psc').textContent=`${ok} / ${tot} · ${pct}%`;
-  const b=store.get('practice',{});b[t.id]=Math.max(b[t.id]||0,pct);store.set('practice',b);document.querySelector('.score').scrollIntoView({behavior:'smooth'})};
+  window.iowLog&&iowLog('practice',t.id,pct);const b=store.get('practice',{});b[t.id]=Math.max(b[t.id]||0,pct);store.set('practice',b);document.querySelector('.score').scrollIntoView({behavior:'smooth'})};
 }
 function lab(vp,t){
  const L=t.lab;vp.onclick=null;vp.onkeydown=null;
@@ -401,7 +401,7 @@ function lab(vp,t){
    fb.className='fb '+(has&&n>=6?'ok':'bad');fb.innerHTML=(!v.trim()?tx('Write your sentence. ','Escribe tu frase. '):!has?tx(`Your sentence doesn't include “${esc(w)}”. `,`Tu frase no incluye «${esc(w)}». `):n<6?tx('Your sentence is too short. ','Tu frase es demasiado corta. '):'<b>Good.</b> '+tx('Check the grammar with your teacher. ','Revisa la gramática con tu profesor/a. '))+'<br>Example: <i>'+esc(s)+'</i>'});
   vp.querySelectorAll('details.rev').forEach(d=>d.open=true);
   const pct=Math.round(ok/tot*100);document.getElementById('lsc').textContent=`${ok} / ${tot} correct · ${pct}%`;
-  const b=store.get('lab',{});b[t.id]=Math.max(b[t.id]||0,pct);store.set('lab',b);
+  window.iowLog&&iowLog('lab',t.id,pct);const b=store.get('lab',{});b[t.id]=Math.max(b[t.id]||0,pct);store.set('lab',b);
   document.querySelector('.score').scrollIntoView({behavior:'smooth'});
  };
 }
@@ -437,7 +437,7 @@ function games(){
  app.innerHTML=`<section class="band"><div class="wrap"><h1>Games</h1><p class="lead">${tx('Revise grammar and vocabulary while you play. Your records are saved in this browser.','Repasa gramática y vocabulario jugando. Tus récords se guardan en este navegador.')}</p></div></section>
  ${[['g','Grammar','Gramática'],['v','Vocabulary','Vocabulario'],['w','Writing','Writing']].map(([k,en,es])=>`<section class="band" style="padding-top:0"><div class="wrap"><h2 style="margin-bottom:14px">${en} <span class="small">· ${GL.filter(g=>g.cat===k).length} games</span></h2><div class="cards">${GL.filter(g=>g.cat===k).map(g=>`<a class="card" href="#juego-${g.id}" style="--c:${g.c}"><span class="dot"></span><h3>${g.n}</h3><p>${tx(g.d[0],g.d[1])}</p><span class="go">${best[g.id]!=null&&lbl[g.id]?lbl[g.id](best[g.id])+' · ':''}Play →</span></a>`).join('')}</div></div></section>`).join('')}`;
 }
-function saveGame(id,v,lower){const b=store.get('games',{});if(b[id]==null||(lower?v<b[id]:v>b[id])){b[id]=v;store.set('games',b);return true}return false}
+function saveGame(id,v,lower){window.iowLog&&iowLog('game',id,v);const b=store.get('games',{});if(b[id]==null||(lower?v<b[id]:v>b[id])){b[id]=v;store.set('games',b);return true}return false}
 function game(id){
  const g=GL.find(x=>x.id===id);if(!g){games();return}
  app.innerHTML=`<section class="band uband" style="--c:${g.c};--on:${onColor(g.c)};padding-block:28px"><div class="wrap"><a href="#juegos" style="font-weight:700;text-decoration:none">← Games</a><h1 style="margin-top:8px">${g.n}</h1></div></section><div class="band"><div class="gwrap" id="gb"></div></div>`;
@@ -855,7 +855,7 @@ function exam(id){
    else if(d.q3!=null){A.q3[d.q3]=t.value;save()}
    else if(d.q4!=null){A.q4[d.q4]=+t.value;save()}
    else if(d.s){const[k,i]=d.s.split('-');const o=k==='s2'?A.s2:A.rub;if(t.value==='')delete o[i];else o[i]=t.value;save();render()}};
-  document.getElementById('fix').onclick=()=>{A.done=true;save();render();document.querySelector('.total')?.scrollIntoView({behavior:'smooth',block:'center'})};
+  document.getElementById('fix').onclick=()=>{A.done=true;save();render();window.iowLog&&iowLog('exam',e.id,+score().total.toFixed(2));document.querySelector('.total')?.scrollIntoView({behavior:'smooth',block:'center'})};
   document.getElementById('cp').onclick=async ev=>{const b=ev.target;try{await navigator.clipboard.writeText(A.w[A.task]||'');b.textContent='Copied'}catch(err){b.textContent='Could not copy'}setTimeout(()=>{b.textContent='Copy my composition'},1800)};
   const rs=document.getElementById('rs');rs.onclick=()=>{if(rs.dataset.c){stop();A=blank();save();render()}else{rs.dataset.c=1;rs.textContent='Sure? Your answers will be deleted. Click again';rs.classList.add('red')}};
   document.getElementById('tmr').onclick=()=>{running?stop():go()};
@@ -927,7 +927,7 @@ function writingLab(){
  document.getElementById('wrnd').onclick=()=>{tp_.value=R0(topics);own.hidden=true;save();upd()};
  document.getElementById('wclr').onclick=()=>{if(!tx_.value||confirmClr()){tx_.value='';save();upd();document.getElementById('wres').innerHTML=''}};
  const confirmClr=()=>{const b=document.getElementById('wclr');if(b.dataset.c)return true;b.dataset.c=1;b.textContent='Sure? Click again';setTimeout(()=>{b.textContent='Clear';delete b.dataset.c},2500);return false};
- const addHist=(m,ai)=>{const h=store.get('wlab-hist',[]);h.unshift({m,t:topic(),d:new Date().toLocaleDateString('en-GB'),ai:!!ai});store.set('wlab-hist',h.slice(0,20))};
+ const addHist=(m,ai)=>{window.iowLog&&iowLog('writing',topic(),m);const h=store.get('wlab-hist',[]);h.unshift({m,t:topic(),d:new Date().toLocaleDateString('en-GB'),ai:!!ai});store.set('wlab-hist',h.slice(0,20))};
  const markedText=(text,spans)=>{spans=spans.filter(s=>s.i>=0).sort((a,b)=>a.i-b.i);let out='',p=0,k=0;spans.forEach(s=>{if(s.i<p)return;out+=esc(text.slice(p,s.i))+`<mark class="wm ${s.cls||''}" title="${esc(s.tip)}">${esc(text.slice(s.i,s.i+s.len))}<sup>${s.n}</sup></mark>`;p=s.i+s.len});out+=esc(text.slice(p));return out.split(/\n\s*\n/).map(x=>`<p>${x.replace(/\n/g,'<br>')}</p>`).join('')};
  const scoreBox=(S,total,src)=>`<div class="wscore"><div class="big3"><span class="small">${src}</span><b>${nf(total)}<small> / 3</small></b><span>≈ ${nf(Math.round(total/3*100)/10)} / 10</span></div><div class="wbars">${WCRIT.map(([k,en,es,,,mx])=>`<div class="wbar"><span>${en}<b>${nf(S[k])} / ${nf(mx)}</b></span><i><b style="width:${S[k]/mx*100}%;background:${S[k]/mx>=.75?'var(--ok)':S[k]/mx>=.5?'var(--sun)':'var(--bad)'}"></b></i></div>`).join('')}</div></div>`;
  document.getElementById('wgo').onclick=()=>{const text=tx_.value;if(words(text)<20){document.getElementById('wres').innerHTML=`<div class="fb bad">${tx('Write at least 20 words before marking.','Escribe al menos 20 palabras antes de corregir.')}</div>`;return}
