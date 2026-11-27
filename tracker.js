@@ -8,7 +8,7 @@ function jget(k,d){try{var v=LS.getItem(k);return v==null?d:JSON.parse(v)}catch(
 function jset(k,v){try{LS.setItem(k,JSON.stringify(v))}catch(e){}}
 var user=jget(UK,null);
 var sid=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-var t0=Date.now(),queue=[],inf={},lastPage='',quiet=false;
+var t0=Date.now(),queue=[],inf={},quiet=false;
 
 /* ---------- envío ---------- */
 function row(tipo,act,nota,det,min){
@@ -25,39 +25,66 @@ function flush(beacon){
   .catch(function(){jset(PK,jget(PK,[]).concat(rows).slice(-500))});
 }
 function flushInf(){
- for(var u in inf){var c=inf[u];row('Práctica ilimitada',u,Math.round(c.ok/c.n*100),c.ok+' / '+c.n+' correctas')}
+ for(var u in inf){var c=inf[u];row('Práctica ilimitada',c.w,nota(c.ok,c.n),c.ok+' / '+c.n+' correctas')}
  inf={};
+}
+function nota(x,max){return Math.round(x/max*100)/10}  // nota sobre 10 con un decimal
+function txt(el){return el?String(el.innerText||el.textContent||'').split('\n')[0].replace(/\s+/g,' ').trim():''}
+function scoreText(){var s=document.querySelector('#app .score');return s?String(s.innerText).replace(/\s*\n\s*/g,' · ').trim():''}
+
+/* ---------- dónde está el alumno (sección › tema › apartado) ---------- */
+var SEC={inicio:'Inicio',gramatica:'Gramática',test:'Gramática',vocabulario:'Vocabulario',writing:'Writing',juegos:'Juegos',juego:'Juegos',pau:'Exámenes PAU'};
+var GEN=/^(Grammar|Vocabulary|Writing|Games|PAU exams|Your route)/i;
+function where(){
+ var h=(location.hash||'#inicio').slice(1)||'inicio',parts=[SEC[h.split('-')[0]]||h];
+ var app=document.getElementById('app');if(!app)return parts[0];
+ if(h==='test-mixto')parts.push('Test mixto');
+ var t=txt(app.querySelector('h1'));if(t&&h!=='inicio'&&!GEN.test(t))parts.push(t);
+ var on=app.querySelectorAll('.chips .chip.on, .tplrow .on, .tabs button.on, #mtabs button.on, .wsb.on b');
+ for(var i=0;i<on.length;i++){var x=txt(on[i]).replace(/^[^\wÀ-ÿ∞]+/,'');if(x&&!/^(All|Todos)$/i.test(x)&&parts.indexOf(x)<0)parts.push(x)}
+ return parts.join(' › ');
+}
+var cur=null;
+function visit(){
+ var w=where();if(cur&&cur.w===w)return;
+ closeVisit();flushInf();cur={w:w,t:Date.now()};
+}
+function closeVisit(){
+ if(!cur)return;var m=Math.round((Date.now()-cur.t)/6000)/10;
+ if(Date.now()-cur.t>3000)row('Visita',cur.w,null,'',m);
+ cur=null;
 }
 
 /* ---------- ganchos llamados desde app.js ---------- */
-var LBL={mc:'opción múltiple',gap:'huecos',tr:'transformaciones'};
+var GAME10={error:10,idioms:10,expr:10,timeline:10,falsefriends:10,upgrade:8,bingo:100};
+var GUNIT={contrarreloj:'puntos',parejas:'movimientos',palabra:'racha',ordena:'racha',prep:'puntos',colloc:'puntos',chain:'cadena',wordform:'bloques',sniper:'puntos',puzzle:'puntos',linksprint:'puntos',redpen:'puntos',duel:'puntos'};
 window.iowLog=function(kind,id,v){
  if(!user)return;
+ var w=where(),sc=scoreText();
  switch(kind){
-  case 'grammar':{var p=String(id).split('|');row('Gramática',p[0]+' · '+(LBL[p[1]]||p[1]),v,v+'%');break}
-  case 'game':row('Juego',id,null,'Puntuación: '+v);break;
-  case 'vocab':row('Vocabulario · test',id,v,v+'%');break;
-  case 'mixed':row('Gramática · test mixto','10 preguntas',v,v+'%');break;
-  case 'practice':row('Vocabulario · práctica',id,v,v+'%');break;
-  case 'lab':row('Vocabulario · lab',id,v,v+'%');break;
-  case 'exam':row('Examen',id,Math.round(v*10),v+' / 10');break;
-  case 'writing':row('Writing Lab',id,Math.round(v/3*100),v+' / 3');break;
-  case 'inf':{var c=inf[id]=inf[id]||{n:0,ok:0};c.n++;if(v)c.ok++;return}
-  default:row(kind,id,null,v);
+  case 'grammar':case 'vocab':case 'mixed':case 'practice':case 'lab':
+   row(kind==='grammar'||kind==='mixed'?'Gramática · nota':'Vocabulario · nota',w,nota(v,100),(sc?sc+' · ':'')+v+'%');break;
+  case 'game':
+   if(id==='escape'){var mm=Math.floor(v/60),ss=v%60;row('Juego',w,null,'Tiempo: '+mm+':'+(ss<10?'0':'')+ss);break}
+   if(GAME10[id])row('Juego',w,nota(v,GAME10[id]),v+' / '+GAME10[id]);
+   else row('Juego',w,null,v+' '+(GUNIT[id]||'puntos'));
+   break;
+  case 'exam':{var tt=document.querySelector('#app .total');
+   row('Examen PAU',w,Math.round(v*10)/10,tt?String(tt.innerText).replace(/\s*\n\s*/g,' ').replace(/^Mark/,'Nota').replace(/Question (\d)/g,'· P$1'):v+' / 10');break}
+  case 'writing':row('Writing Lab',w+' › '+id,nota(v,3),v+' / 3');break;
+  case 'inf':{var k=w+'|'+id,c=inf[k]=inf[k]||{w:w,n:0,ok:0};c.n++;if(v)c.ok++;return}
+  default:row(kind,w,null,v);
  }
  flush();
 };
 
 /* ---------- navegación ---------- */
-function page(){
- var h=(location.hash||'#inicio').slice(1)||'inicio';
- if(h===lastPage)return;lastPage=h;
- flushInf();row('Página',h);flush();
-}
-window.addEventListener('hashchange',page);
+function later(){setTimeout(visit,350)}
+window.addEventListener('hashchange',later);
+document.addEventListener('click',later,true);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'){flushInf();flush(true)}});
 window.addEventListener('pagehide',function(){
- if(!user||quiet)return;flushInf();
+ if(!user||quiet)return;closeVisit();flushInf();
  row('Salida','',null,'',Math.round((Date.now()-t0)/6000)/10);flush(true);
 });
 setInterval(function(){if(queue.length)flush()},20000);
@@ -97,7 +124,7 @@ function chip(){
 }
 function logout(){
  if(!confirm('Log out / Cerrar sesión, '+user.n+'?'))return;
- flushInf();row('Salida','',null,'Cierre de sesión',Math.round((Date.now()-t0)/6000)/10);flush(true);
+ closeVisit();flushInf();row('Salida','',null,'Cierre de sesión',Math.round((Date.now()-t0)/6000)/10);flush(true);
  saveProgress(user);clearProgress();LS.removeItem(UK);user=null;
  location.hash='';location.reload();
 }
@@ -118,13 +145,13 @@ function login(){
   user={n:n+' '+a,g:g};jset(UK,user);
   if(restoreProgress(user)){quiet=true;location.reload();return}
   row('Entrada','Inicio de sesión',null,navigator.userAgent.indexOf('Mobi')>-1?'Móvil':'Ordenador');flush();
-  w.remove();chip();lastPage='';page();
+  w.remove();chip();later();
  };
 }
 
 function start(){
  if(!user){login();return}
- chip();row('Entrada','',null,navigator.userAgent.indexOf('Mobi')>-1?'Móvil':'Ordenador');page();
+ chip();row('Entrada','',null,navigator.userAgent.indexOf('Mobi')>-1?'Móvil':'Ordenador');flush();later();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
